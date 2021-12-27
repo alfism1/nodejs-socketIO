@@ -11,12 +11,39 @@ const io = new Server(httpServer, {
 });
 const port = 4000;
 
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.send("Hello World!");
 });
 
+io.use((socket, next) => {
+  const username = socket.handshake.auth.username;
+  if (!username) {
+    return next(new Error("invalid username"));
+  }
+  socket.username = username;
+  next();
+});
+
 io.on("connection", (socket) => {
-  console.log(socket.id);
+  const users = [];
+  for (let [id, socket] of io.of("/").sockets) {
+    users.push({
+      userID: id,
+      username: socket.username,
+    });
+  }
+  io.emit("users", users);
+  // notify existing users
+  socket.broadcast.emit("user connected", {
+    userID: socket.id,
+    username: socket.username,
+  });
+
+  socket.on("chat message", (msg) => {
+    console.log(msg);
+    // socket.broadcast.emit("chat message", msg);
+    io.emit("chat message", msg);
+  });
 });
 
 httpServer.listen(port, () => {
