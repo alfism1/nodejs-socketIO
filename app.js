@@ -17,10 +17,12 @@ app.get("/", (_req, res) => {
 
 io.use((socket, next) => {
   const username = socket.handshake.auth.username;
-  if (!username) {
+  const color = socket.handshake.auth.color;
+  if (!username && !color) {
     return next(new Error("invalid username"));
   }
   socket.username = username;
+  socket.color = color;
   next();
 });
 
@@ -30,6 +32,7 @@ io.on("connection", (socket) => {
     users.push({
       userID: id,
       username: socket.username,
+      color: socket.color,
     });
   }
   io.emit("users", users);
@@ -37,6 +40,7 @@ io.on("connection", (socket) => {
   socket.broadcast.emit("user connected", {
     userID: socket.id,
     username: socket.username,
+    color: socket.color,
   });
 
   socket.on("chat message", (msg) => {
